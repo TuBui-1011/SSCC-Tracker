@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Upload SSCC Excel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  </head>
+  <body class="bg-light">
+    <div class="container mt-5">
+      <h3>Admin: Upload file Excel SSCC</h3>
+      <div class="form-group">
+        <label for="excelFile"
+          >Chọn file Excel chứa SSCC (cột <b>Storage Unit</b>):</label
+        >
+        <input
+          type="file"
+          id="excelFile"
+          accept=".xlsx,.xls"
+          class="form-control-file"
+        />
+      </div>
+      <div id="alertBox"></div>
+    </div>
+    <script>
+      function showAlert(type, message) {
+        const alertHTML = `<div class="alert alert-${type} mt-3">${message}</div>`;
+        $("#alertBox").html(alertHTML);
+      }
+
+      $("#excelFile").on("change", function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          // Tìm vị trí các cột
+          let ssccCol = -1,
+            materialCol = -1,
+            batchCol = -1;
+          if (json.length > 0) {
+            const headers = json[0].map((col) =>
+              String(col)
+                .toLowerCase()
+                .replace(/[\s_]+/g, "")
+            );
+            ssccCol = headers.findIndex((col) => col === "storageunit");
+            // Chấp nhận nhiều kiểu tên cột cho Material Code
+            materialCol = headers.findIndex((col) =>
+              [
+                "material",
+                "materialcode",
+                "material_code",
+                "material code",
+              ].includes(col)
+            );
+            batchCol = headers.findIndex((col) => col === "batch");
+            console.log("Headers:", headers); // debug
+          }
+          if (ssccCol === -1) {
+            showAlert(
+              "danger",
+              "❌ Không tìm thấy cột <b>Storage Unit</b> trong file Excel!"
+            );
+            localStorage.removeItem("ssccData");
+            return;
+          }
+
+          // Tạo mảng object
+          const ssccData = json
+            .slice(1)
+            .filter(
+              (row) =>
+                row[ssccCol] !== undefined &&
+                row[ssccCol] !== null &&
+                String(row[ssccCol]).trim() !== ""
+            )
+            .map((row) => ({
+              SSCC: String(row[ssccCol]).trim(),
+              MaterialCode:
+                materialCol !== -1 ? String(row[materialCol] || "").trim() : "",
+              Batch: batchCol !== -1 ? String(row[batchCol] || "").trim() : "",
+            }));
+
+          localStorage.setItem("ssccData", JSON.stringify(ssccData));
+          showAlert(
+            "success",
+            `✅ Đã lưu ${ssccData.length} mã SSCC vào localStorage!`
+          );
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    </script>
+  </body>
+</html>
