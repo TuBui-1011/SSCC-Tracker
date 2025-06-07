@@ -300,12 +300,28 @@
           }
         }
       });
+
       // Prevent form submit for demo
       $("form").on("submit", function (e) {
         e.preventDefault();
-        // Bạn có thể kiểm tra email/password ở đây nếu muốn
-        window.location.href = "checkSSCC.html";
+        const email = $("#email").val();
+        const password = $("#password").val();
+
+        // Simulate authentication (replace with your actual logic)
+        if (email === "admin@example.com" && password === "password") {
+          // Successful login
+          // Redirect to checkSSCC.html or perform other actions
+          window.location.href = "checkSSCC.html";
+        } else {
+          // Failed login
+          // Display error message
+          showAlert("danger", "❌ Email hoặc mật khẩu không đúng!");
+        }
       });
+
+      function showAlert(type, message) {
+        // Display alert message
+      }
     </script>
   </body>
 </html>
